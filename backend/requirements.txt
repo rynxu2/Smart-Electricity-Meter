@@ -1,0 +1,30 @@
+# Smart Electricity Meter - Backend
+# FastAPI + EasyOCR + MQTT + Supabase + Telegram
+
+fastapi==0.115.0
+uvicorn[standard]==0.32.0
+python-dotenv==1.0.1
+pydantic==2.10.0
+pydantic-settings==2.7.0
+
+# Supabase
+supabase==2.11.0
+
+# MQTT
+paho-mqtt==2.1.0
+
+# OCR
+easyocr==1.7.2
+Pillow==11.1.0
+numpy==1.26.4
+
+# Telegram Bot
+python-telegram-bot==21.9
+
+# Scheduling
+apscheduler==3.10.4
+
+# HTTP client
+httpx==0.28.0
+
+python-dotenv
