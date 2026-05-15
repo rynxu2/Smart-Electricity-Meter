@@ -1,4 +1,4 @@
-"""Vietnam tiered electricity bill calculator (Bậc thang giá điện Việt Nam 2024)."""
+"""Vietnam tiered electricity bill calculator (Bậc thang giá điện Việt Nam 2025)."""
 
 from dataclasses import dataclass
 
@@ -12,14 +12,14 @@ class TierInfo:
     label: str
 
 
-# Bậc thang giá điện sinh hoạt Việt Nam 2024
+# Bậc thang giá điện sinh hoạt Việt Nam 2025
 ELECTRICITY_TIERS: list[TierInfo] = [
-    TierInfo(1, 0, 50, 1893, "0 - 50 kWh"),
-    TierInfo(2, 50, 100, 1956, "51 - 100 kWh"),
-    TierInfo(3, 100, 200, 2271, "101 - 200 kWh"),
-    TierInfo(4, 200, 300, 2860, "201 - 300 kWh"),
-    TierInfo(5, 300, 400, 3197, "301 - 400 kWh"),
-    TierInfo(6, 400, float("inf"), 3302, "> 400 kWh"),
+    TierInfo(1, 0, 50, 1984, "0 - 50 kWh"),
+    TierInfo(2, 50, 100, 2050, "51 - 100 kWh"),
+    TierInfo(3, 100, 200, 2380, "101 - 200 kWh"),
+    TierInfo(4, 200, 300, 2998, "201 - 300 kWh"),
+    TierInfo(5, 300, 400, 3350, "301 - 400 kWh"),
+    TierInfo(6, 400, float("inf"), 3460, "> 400 kWh"),
 ]
 
 DEFAULT_VAT_RATE = 8.0  # %

@@ -1,33 +1,19 @@
 "use client";
 
-import { useState } from "react";
-import { BarChart3, Camera, Radio, PenTool, Download } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Camera, Radio, PenTool, Download } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
+import { apiFetch } from "@/lib/supabase";
 
 interface Reading {
   id: string;
-  device: string;
+  device_id: string;
   source: string;
-  value: number;
-  confidence?: number;
-  time: string;
+  ocr_value?: number;
+  pulse_kwh?: number;
+  ocr_confidence?: number;
+  read_at: string;
 }
-
-const DEMO_READINGS: Reading[] = [
-  { id: "1", device: "Công tơ #001", source: "ocr", value: 15234.5, confidence: 0.96, time: "22:00 - 04/05/2026" },
-  { id: "2", device: "Công tơ #003", source: "pulse", value: 3.24, time: "21:55 - 04/05/2026" },
-  { id: "3", device: "Công tơ #002", source: "ocr", value: 8912.3, confidence: 0.91, time: "22:00 - 04/05/2026" },
-  { id: "4", device: "Công tơ #007", source: "pulse", value: 1.87, time: "21:50 - 04/05/2026" },
-  { id: "5", device: "Công tơ #001", source: "pulse", value: 4.12, time: "21:45 - 04/05/2026" },
-  { id: "6", device: "Công tơ #003", source: "ocr", value: 22145.8, confidence: 0.88, time: "16:00 - 04/05/2026" },
-  { id: "7", device: "Công tơ #002", source: "manual", value: 8900.0, time: "10:00 - 04/05/2026" },
-  { id: "8", device: "Công tơ #001", source: "pulse", value: 5.67, time: "21:40 - 04/05/2026" },
-];
-
-const HOURLY_DATA = Array.from({ length: 24 }, (_, i) => ({
-  hour: `${i}h`,
-  kwh: Math.round((Math.sin(i / 4) + 1.5) * 15 + Math.random() * 10),
-}));
 
 const sourceConfig: Record<string, { label: string; icon: typeof Camera; badge: string }> = {
   ocr: { label: "Camera OCR", icon: Camera, badge: "badge-green" },
@@ -53,10 +39,33 @@ function ChartTooltip({ active, payload, label }: ChartTooltipProps) {
   );
 }
 
+function formatTime(dateStr: string): string {
+  return new Date(dateStr).toLocaleString("vi-VN", {
+    hour: "2-digit", minute: "2-digit",
+    day: "2-digit", month: "2-digit", year: "numeric",
+  });
+}
+
 export default function ReadingsPage() {
+  const [readings, setReadings] = useState<Reading[]>([]);
+  const [loading, setLoading] = useState(true);
   const [sourceFilter, setSourceFilter] = useState("all");
 
-  const filtered = sourceFilter === "all" ? DEMO_READINGS : DEMO_READINGS.filter((r) => r.source === sourceFilter);
+  useEffect(() => {
+    apiFetch<Reading[]>("/readings/?limit=50")
+      .then(setReadings)
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  const filtered = sourceFilter === "all" ? readings : readings.filter((r) => r.source === sourceFilter);
+
+  const hourlyData = Array.from({ length: 24 }, (_, i) => {
+    const kwh = readings
+      .filter((r) => r.source === "pulse" && new Date(r.read_at).getHours() === i)
+      .reduce((sum, r) => sum + (r.pulse_kwh || 0), 0);
+    return { hour: `${i}h`, kwh: Math.round(kwh * 100) / 100 };
+  });
 
   return (
     <div style={{ maxWidth: 1200, margin: "0 auto" }}>
@@ -65,17 +74,14 @@ export default function ReadingsPage() {
           <h1 style={{ fontSize: "1.5rem", fontWeight: 700 }}>📈 Lịch sử chỉ số</h1>
           <p style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>Dữ liệu đọc từ camera OCR và cảm biến quang</p>
         </div>
-        <button className="btn btn-ghost">
-          <Download size={14} /> Xuất CSV
-        </button>
+        <button className="btn btn-ghost"><Download size={14} /> Xuất CSV</button>
       </div>
 
-      {/* Hourly Chart */}
       <div className="card" style={{ padding: "1.25rem", marginBottom: "1.5rem" }}>
         <div className="section-title" style={{ marginBottom: "1rem" }}>Tiêu thụ theo giờ (hôm nay)</div>
-        <div style={{ width: "100%", height: 220 }}>
-          <ResponsiveContainer>
-            <BarChart data={HOURLY_DATA} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
+        <div style={{ width: "100%", height: 220, minWidth: 0 }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={hourlyData} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
               <XAxis dataKey="hour" axisLine={false} tickLine={false} tick={{ fill: "var(--text-muted)", fontSize: 10 }} />
               <YAxis axisLine={false} tickLine={false} tick={{ fill: "var(--text-muted)", fontSize: 10 }} width={35} />
@@ -86,7 +92,6 @@ export default function ReadingsPage() {
         </div>
       </div>
 
-      {/* Source Filter */}
       <div style={{ display: "flex", gap: "0.5rem", marginBottom: "1rem" }}>
         {["all", "ocr", "pulse", "manual"].map((s) => (
           <button key={s} className={`btn ${sourceFilter === s ? "btn-primary" : "btn-ghost"}`} onClick={() => setSourceFilter(s)} style={{ fontSize: "0.75rem", padding: "0.375rem 0.75rem" }}>
@@ -95,50 +100,42 @@ export default function ReadingsPage() {
         ))}
       </div>
 
-      {/* Readings Table */}
       <div className="card" style={{ padding: "0" }}>
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>Thiết bị</th>
-              <th>Nguồn</th>
-              <th>Giá trị</th>
-              <th>Độ tin cậy</th>
-              <th>Thời gian</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map((r) => {
-              const config = sourceConfig[r.source];
-              const Icon = config.icon;
-              return (
-                <tr key={r.id}>
-                  <td style={{ fontWeight: 500, color: "var(--text-primary)" }}>{r.device}</td>
-                  <td>
-                    <span className={`badge ${config.badge}`}>
-                      <Icon size={10} /> {config.label}
-                    </span>
-                  </td>
-                  <td style={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 600, color: "var(--accent-primary)" }}>
-                    {r.source === "ocr" || r.source === "manual"
-                      ? `${r.value.toLocaleString("vi-VN")} kWh`
-                      : `${r.value.toFixed(2)} kWh`}
-                  </td>
-                  <td>
-                    {r.confidence ? (
-                      <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "0.8rem", color: r.confidence > 0.9 ? "var(--accent-primary)" : "var(--accent-secondary)" }}>
-                        {(r.confidence * 100).toFixed(0)}%
-                      </span>
-                    ) : (
-                      <span style={{ color: "var(--text-muted)" }}>—</span>
-                    )}
-                  </td>
-                  <td style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>{r.time}</td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+        {loading ? (
+          <div style={{ padding: "2rem", textAlign: "center", color: "var(--text-muted)" }}>Đang tải...</div>
+        ) : filtered.length === 0 ? (
+          <div style={{ padding: "2rem", textAlign: "center", color: "var(--text-muted)" }}>Chưa có dữ liệu chỉ số</div>
+        ) : (
+          <table className="data-table">
+            <thead>
+              <tr><th>Thiết bị</th><th>Nguồn</th><th>Giá trị</th><th>Độ tin cậy</th><th>Thời gian</th></tr>
+            </thead>
+            <tbody>
+              {filtered.map((r) => {
+                const config = sourceConfig[r.source] || sourceConfig.manual;
+                const Icon = config.icon;
+                const value = r.source === "pulse" ? (r.pulse_kwh || 0) : (r.ocr_value || 0);
+                return (
+                  <tr key={r.id}>
+                    <td style={{ fontWeight: 500, color: "var(--text-primary)" }}>{r.device_id}</td>
+                    <td><span className={`badge ${config.badge}`}><Icon size={10} /> {config.label}</span></td>
+                    <td style={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 600, color: "var(--accent-primary)" }}>
+                      {r.source === "pulse" ? `${value.toFixed(2)} kWh` : `${value.toLocaleString()} kWh`}
+                    </td>
+                    <td>
+                      {r.ocr_confidence ? (
+                        <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "0.8rem", color: r.ocr_confidence > 0.9 ? "var(--accent-primary)" : "var(--accent-secondary)" }}>
+                          {(r.ocr_confidence * 100).toFixed(0)}%
+                        </span>
+                      ) : <span style={{ color: "var(--text-muted)" }}>—</span>}
+                    </td>
+                    <td style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>{formatTime(r.read_at)}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        )}
       </div>
     </div>
   );

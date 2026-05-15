@@ -78,7 +78,7 @@ Dashboard: http://localhost:3000
 
 - ✅ **OCR đọc chỉ số**: Camera chụp ảnh → EasyOCR nhận dạng số
 - ✅ **Cảm biến quang**: Đếm xung quay đĩa → Tính kWh real-time
-- ✅ **Tính tiền tự động**: 6 bậc giá điện VN 2024 + VAT 8%
+- ✅ **Tính tiền tự động**: 6 bậc giá điện VN 2025 + VAT 8%
 - ✅ **Phát hiện bất thường**: Spike, zero usage, reverse flow, night spike
 - ✅ **Cảnh báo Telegram**: Gửi thông báo qua Telegram Bot
 - ✅ **Dashboard**: Biểu đồ tiêu thụ, quản lý công tơ, lịch sử chỉ số

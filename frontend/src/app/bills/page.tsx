@@ -4,12 +4,12 @@ import { useState } from "react";
 import { Receipt, Calculator, ChevronRight } from "lucide-react";
 
 const TIERS = [
-  { tier: 1, range: "0 - 50 kWh", price: 1893 },
-  { tier: 2, range: "51 - 100 kWh", price: 1956 },
-  { tier: 3, range: "101 - 200 kWh", price: 2271 },
-  { tier: 4, range: "201 - 300 kWh", price: 2860 },
-  { tier: 5, range: "301 - 400 kWh", price: 3197 },
-  { tier: 6, range: "> 400 kWh", price: 3302 },
+  { tier: 1, range: "0 - 50 kWh", price: 1984 },
+  { tier: 2, range: "51 - 100 kWh", price: 2050 },
+  { tier: 3, range: "101 - 200 kWh", price: 2380 },
+  { tier: 4, range: "201 - 300 kWh", price: 2998 },
+  { tier: 5, range: "301 - 400 kWh", price: 3350 },
+  { tier: 6, range: "> 400 kWh", price: 3460 },
 ];
 
 interface TierResult {
@@ -21,7 +21,7 @@ interface TierResult {
 
 function calculateBill(kwh: number): { tiers: TierResult[]; subtotal: number; vat: number; total: number } {
   const tierLimits = [50, 50, 100, 100, 100, Infinity];
-  const tierPrices = [1893, 1956, 2271, 2860, 3197, 3302];
+  const tierPrices = [1984, 2050, 2380, 2998, 3350, 3460];
 
   let remaining = kwh;
   const tiers: TierResult[] = [];
@@ -50,7 +50,7 @@ export default function BillsPage() {
         💰 Tính tiền điện
       </h1>
       <p style={{ fontSize: "0.8rem", color: "var(--text-muted)", marginBottom: "1.5rem" }}>
-        Tính tiền điện tự động theo bậc thang giá Việt Nam 2024
+        Tính tiền điện tự động theo bậc thang giá Việt Nam 2025
       </p>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.5rem" }}>
@@ -162,7 +162,7 @@ export default function BillsPage() {
           {/* Pricing Table */}
           <div className="card" style={{ padding: "1.5rem" }}>
             <div className="section-title" style={{ marginBottom: "1rem" }}>
-              <Receipt size={16} /> Bảng giá điện 2024
+              <Receipt size={16} /> Bảng giá điện
             </div>
             <table className="data-table">
               <thead>

@@ -31,7 +31,7 @@ async def create_device(device: DeviceCreate):
     """Register a new meter device."""
     db = get_db()
     try:
-        result = db.table("devices").insert(device.model_dump()).execute()
+        result = db.table("devices").insert(device.model_dump(exclude_none=True)).execute()
         device_data = result.data[0]
 
         # Create default settings
