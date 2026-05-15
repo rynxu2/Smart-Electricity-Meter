@@ -18,7 +18,7 @@ ultralytics>=8.3.0
 
 # OCR — Stage 2: PaddleOCR v4 digit recognition (CPU-native, stable)
 paddlepaddle>=2.6.0,<3.0.0
-paddleocr>=2.7.0,<2.9.0
+paddleocr
 
 # Image processing
 Pillow==11.1.0
