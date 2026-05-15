@@ -2,8 +2,7 @@
 
 from pydantic import BaseModel, Field
 from datetime import datetime, date
-from typing import Optional
-from uuid import UUID
+from typing import Optional, List
 
 
 # ── Device ──────────────────────────────────
@@ -15,11 +14,11 @@ class DeviceBase(BaseModel):
 
 
 class DeviceCreate(DeviceBase):
-    pass
+    id: Optional[str] = None
 
 
 class DeviceResponse(DeviceBase):
-    id: UUID
+    id: str
     status: str
     last_seen_at: Optional[datetime] = None
     created_at: datetime
@@ -33,7 +32,7 @@ class DeviceUpdate(BaseModel):
 
 # ── Reading ──────────────────────────────────
 class ReadingBase(BaseModel):
-    device_id: UUID
+    device_id: str
     source: str = Field(..., pattern="^(ocr|pulse|manual)$")
 
 
@@ -56,8 +55,8 @@ class ReadingManual(ReadingBase):
 
 
 class ReadingResponse(BaseModel):
-    id: UUID
-    device_id: UUID
+    id: str
+    device_id: str
     ocr_value: Optional[float] = None
     ocr_confidence: Optional[float] = None
     image_url: Optional[str] = None
@@ -77,14 +76,14 @@ class TierBreakdown(BaseModel):
 
 
 class BillResponse(BaseModel):
-    id: UUID
-    device_id: UUID
+    id: str
+    device_id: str
     period_start: date
     period_end: date
     start_reading: float
     end_reading: float
     kwh_consumed: float
-    tier_breakdown: list[TierBreakdown]
+    tier_breakdown: List[TierBreakdown]
     subtotal: float
     vat_rate: float
     vat_amount: float
@@ -93,15 +92,15 @@ class BillResponse(BaseModel):
 
 
 class BillCalculateRequest(BaseModel):
-    device_id: UUID
+    device_id: str
     period_start: date
     period_end: date
 
 
 # ── Alert ──────────────────────────────────
 class AlertResponse(BaseModel):
-    id: UUID
-    device_id: UUID
+    id: str
+    device_id: str
     alert_type: str
     severity: str
     title: str
@@ -122,8 +121,8 @@ class DeviceSettingsUpdate(BaseModel):
 
 
 class DeviceSettingsResponse(BaseModel):
-    id: UUID
-    device_id: UUID
+    id: str
+    device_id: str
     capture_interval_hours: int
     pulse_report_interval_minutes: int
     pulse_per_kwh: float

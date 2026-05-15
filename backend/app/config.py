@@ -13,7 +13,7 @@ class Settings(BaseSettings):
 
     # App
     APP_NAME: str = "Smart Electricity Meter API"
-    APP_VERSION: str = "1.0.0"
+    APP_VERSION: str = "3.0.0"
     DEBUG: bool = False
 
     # Supabase
@@ -34,13 +34,19 @@ class Settings(BaseSettings):
     TELEGRAM_BOT_TOKEN: str = ""
     TELEGRAM_DEFAULT_CHAT_ID: str = ""
 
-    # OCR
-    OCR_LANGUAGES: list[str] = ["en"]
+    # OCR — YOLOv11n + PaddleOCR v4 Pipeline
+    YOLO_MODEL_PATH: str = "yolo11n.pt"
     OCR_CONFIDENCE_THRESHOLD: float = 0.6
+    YOLO_CONFIDENCE_THRESHOLD: float = 0.3
 
     # Anomaly Detection
     ANOMALY_SPIKE_MULTIPLIER: float = 2.0
     ANOMALY_ZERO_HOURS: int = 24
+    ANOMALY_ML_ENABLED: bool = True
+    ANOMALY_ML_ALGORITHM: str = "ensemble"  # "iforest" | "ecod" | "ensemble"
+    ANOMALY_IFOREST_CONTAMINATION: float = 0.05
+    ANOMALY_ECOD_CONTAMINATION: float = 0.05
+    ANOMALY_MIN_TRAINING_SAMPLES: int = 20
 
     # Bill Calculation
     VAT_RATE: float = 8.0

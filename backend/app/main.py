@@ -13,7 +13,7 @@ from app.dependencies import get_db
 from app.mqtt_handler import MQTTHandler
 from app.anomaly_detector import AnomalyDetector
 from app.telegram_notifier import TelegramNotifier
-from app.routers import meters, readings, bills, alerts
+from app.routers import meters, readings, bills, alerts, ml
 
 logging.basicConfig(
     level=logging.INFO,
@@ -73,6 +73,7 @@ def create_app() -> FastAPI:
     app.include_router(readings.router, prefix="/api")
     app.include_router(bills.router, prefix="/api")
     app.include_router(alerts.router, prefix="/api")
+    app.include_router(ml.router, prefix="/api")
 
     @app.get("/")
     async def root():

@@ -1,5 +1,5 @@
 # Smart Electricity Meter - Backend
-# FastAPI + EasyOCR + MQTT + Supabase + Telegram
+# FastAPI + YOLOv11n + PaddleOCR v4 + PyOD + MQTT + Supabase + Telegram
 
 fastapi==0.115.0
 uvicorn[standard]==0.32.0
@@ -13,10 +13,19 @@ supabase==2.11.0
 # MQTT
 paho-mqtt==2.1.0
 
-# OCR
-easyocr==1.7.2
+# OCR — Stage 1: YOLOv11n digit-region detection
+ultralytics>=8.3.0
+
+# OCR — Stage 2: PaddleOCR v4 digit recognition (CPU-native, stable)
+paddlepaddle>=2.6.0,<3.0.0
+paddleocr>=2.7.0,<2.9.0
+
+# Image processing
 Pillow==11.1.0
 numpy==1.26.4
+
+# Anomaly Detection — IForest + ECOD via PyOD
+pyod>=2.0.0
 
 # Telegram Bot
 python-telegram-bot==21.9
@@ -26,5 +35,3 @@ apscheduler==3.10.4
 
 # HTTP client
 httpx==0.28.0
-
-python-dotenv

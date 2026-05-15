@@ -24,6 +24,7 @@ class MQTTHandler:
         self.notifier = telegram_notifier
         self.settings = get_settings()
         self.client = None
+        self._known_devices = set()
 
     def connect(self):
         """Initialize and connect MQTT client."""
@@ -67,7 +68,7 @@ class MQTTHandler:
             client.subscribe(self.settings.MQTT_TOPIC_IMAGE)
             client.subscribe(self.settings.MQTT_TOPIC_PULSE)
             client.subscribe(self.settings.MQTT_TOPIC_STATUS)
-            logger.info(f"Subscribed to topics: image, pulse, status")
+            logger.info("Subscribed to topics: image, pulse, status")
         else:
             logger.error(f"MQTT connect failed with code {rc}")
 
@@ -82,7 +83,6 @@ class MQTTHandler:
         logger.info(f"MQTT message on {topic} ({len(msg.payload)} bytes)")
 
         try:
-            # Extract device_id from topic: smart-meter/{device_id}/image
             parts = topic.split("/")
             if len(parts) < 3:
                 logger.warning(f"Invalid topic format: {topic}")
@@ -90,6 +90,9 @@ class MQTTHandler:
 
             device_id = parts[1]
             message_type = parts[2]
+
+            # Auto-register device if first time seen
+            self._ensure_device_exists(device_id)
 
             if message_type == "image":
                 self._handle_image(device_id, msg.payload)
@@ -103,8 +106,38 @@ class MQTTHandler:
         except Exception as e:
             logger.error(f"Message handling error: {e}", exc_info=True)
 
+    def _ensure_device_exists(self, device_id: str):
+        """Auto-register a device in the database if it doesn't exist yet."""
+        if device_id in self._known_devices:
+            return
+
+        try:
+            result = self.db.table("devices").select("id").eq("id", device_id).execute()
+            if result.data:
+                self._known_devices.add(device_id)
+                return
+
+            # Auto-register new device
+            self.db.table("devices").insert({
+                "id": device_id,
+                "name": device_id,
+                "meter_serial": device_id,
+                "status": "active",
+            }).execute()
+
+            # Create default settings
+            self.db.table("device_settings").insert({
+                "device_id": device_id,
+            }).execute()
+
+            self._known_devices.add(device_id)
+            logger.info(f"Auto-registered new device: {device_id}")
+
+        except Exception as e:
+            logger.error(f"Device registration check failed for {device_id}: {e}")
+
     def _handle_image(self, device_id: str, payload: bytes):
-        """Process camera image: decode → OCR → store reading → check anomalies."""
+        """Process camera image: decode → YOLOv11n+PaddleOCR → store reading → check anomalies."""
         try:
             data = json.loads(payload)
             image_b64 = data.get("image", "")
@@ -113,20 +146,19 @@ class MQTTHandler:
                 logger.warning(f"Empty image from device {device_id}")
                 return
 
-            # Decode and run OCR
             image = decode_base64_image(image_b64)
             ocr_result = extract_digits(
                 image,
-                languages=self.settings.OCR_LANGUAGES,
                 confidence_threshold=self.settings.OCR_CONFIDENCE_THRESHOLD,
             )
 
-            logger.info(f"OCR result for {device_id}: value={ocr_result['value']}, confidence={ocr_result['confidence']}")
+            logger.info(
+                f"OCR result for {device_id}: value={ocr_result['value']}, "
+                f"confidence={ocr_result['confidence']}, pipeline={ocr_result.get('pipeline', 'unknown')}"
+            )
 
-            # Upload image to Supabase Storage
             image_url = self._upload_image(device_id, image_b64)
 
-            # Store reading
             reading_data = {
                 "device_id": device_id,
                 "ocr_value": ocr_result["value"],
@@ -136,7 +168,6 @@ class MQTTHandler:
             }
             self.db.table("readings").insert(reading_data).execute()
 
-            # Update device last_seen
             self.db.table("devices").update(
                 {"last_seen_at": datetime.now(timezone.utc).isoformat()}
             ).eq("id", device_id).execute()
@@ -160,7 +191,6 @@ class MQTTHandler:
             }
             self.db.table("readings").insert(reading_data).execute()
 
-            # Update last_seen
             self.db.table("devices").update(
                 {"last_seen_at": datetime.now(timezone.utc).isoformat()}
             ).eq("id", device_id).execute()
@@ -184,7 +214,7 @@ class MQTTHandler:
         except Exception as e:
             logger.error(f"Status handling error for {device_id}: {e}", exc_info=True)
 
-    def _upload_image(self, device_id: str, image_b64: str) -> str | None:
+    def _upload_image(self, device_id: str, image_b64: str):
         """Upload image to Supabase Storage and return public URL."""
         try:
             timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
