@@ -27,7 +27,6 @@ class Settings(BaseSettings):
     MQTT_USERNAME: str = ""
     MQTT_PASSWORD: str = ""
     MQTT_TOPIC_IMAGE: str = "smart-meter/+/image"
-    MQTT_TOPIC_PULSE: str = "smart-meter/+/pulse"
     MQTT_TOPIC_STATUS: str = "smart-meter/+/status"
 
     # Telegram Bot
@@ -50,6 +49,10 @@ class Settings(BaseSettings):
 
     # Bill Calculation
     VAT_RATE: float = 8.0
+
+    # Device Monitoring
+    DEVICE_OFFLINE_TIMEOUT_SECONDS: int = 300  # 5 minutes (5 heartbeat missed)
+    DEVICE_MONITOR_INTERVAL_SECONDS: int = 30  # Check every 30s
 
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
 

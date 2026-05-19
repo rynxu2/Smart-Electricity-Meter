@@ -3,11 +3,9 @@
  * 
  * Reads electricity meter using:
  * 1. ESP32-CAM: Captures images → sends to server via MQTT for OCR
- * 2. IR Photodiode: Counts meter disk pulses → calculates kWh
  * 
  * MQTT Topics:
  *   smart-meter/{DEVICE_ID}/image   → Base64-encoded JPEG image
- *   smart-meter/{DEVICE_ID}/pulse   → Pulse count + kWh data
  *   smart-meter/{DEVICE_ID}/status  → Device heartbeat
  */
 
@@ -22,8 +20,8 @@
 // ═══════════════════════════════════════════
 
 // WiFi
-#define WIFI_SSID       "YOUR_WIFI_SSID"
-#define WIFI_PASSWORD   "YOUR_WIFI_PASSWORD"
+#define WIFI_SSID       "Thuc Tu"
+#define WIFI_PASSWORD   "88886666"
 
 // MQTT
 #define MQTT_BROKER     "broker.hivemq.com"
@@ -36,14 +34,8 @@
 
 // Timing (milliseconds)
 #define CAPTURE_INTERVAL_MS    21600000UL  // 6 hours
-#define PULSE_REPORT_INTERVAL  300000UL    // 5 minutes
 #define STATUS_INTERVAL        60000UL     // 1 minute heartbeat
 #define WIFI_RETRY_DELAY       5000
-
-// Pulse sensor
-#define PULSE_SENSOR_PIN       13     // IR photodiode GPIO
-#define PULSE_PER_KWH          1600   // Pulses per kWh (check your meter)
-#define DEBOUNCE_MS            50     // Pulse debounce time
 
 // Status LED
 #define LED_PIN                4      // Built-in flash LED
@@ -77,30 +69,11 @@ PubSubClient mqtt(espClient);
 
 // MQTT topics
 char topicImage[64];
-char topicPulse[64];
 char topicStatus[64];
 
 // Timing
 unsigned long lastCapture = 0;
-unsigned long lastPulseReport = 0;
 unsigned long lastStatus = 0;
-
-// Pulse counter (volatile for ISR)
-volatile unsigned long pulseCount = 0;
-volatile unsigned long lastPulseTime = 0;
-unsigned long reportedPulseCount = 0;
-
-// ═══════════════════════════════════════════
-// INTERRUPT SERVICE ROUTINE - Pulse Counter
-// ═══════════════════════════════════════════
-
-void IRAM_ATTR pulseISR() {
-    unsigned long now = millis();
-    if (now - lastPulseTime > DEBOUNCE_MS) {
-        pulseCount++;
-        lastPulseTime = now;
-    }
-}
 
 // ═══════════════════════════════════════════
 // SETUP
@@ -116,15 +89,10 @@ void setup() {
 
     // Build MQTT topics
     snprintf(topicImage,  sizeof(topicImage),  "smart-meter/%s/image",  DEVICE_ID);
-    snprintf(topicPulse,  sizeof(topicPulse),  "smart-meter/%s/pulse",  DEVICE_ID);
     snprintf(topicStatus, sizeof(topicStatus), "smart-meter/%s/status", DEVICE_ID);
 
     // Init camera
     initCamera();
-
-    // Init pulse sensor
-    pinMode(PULSE_SENSOR_PIN, INPUT_PULLUP);
-    attachInterrupt(digitalPinToInterrupt(PULSE_SENSOR_PIN), pulseISR, FALLING);
 
     // Connect WiFi
     connectWiFi();
@@ -160,11 +128,7 @@ void loop() {
         lastCapture = now;
     }
 
-    // Report pulse data at interval
-    if (now - lastPulseReport >= PULSE_REPORT_INTERVAL) {
-        sendPulseData();
-        lastPulseReport = now;
-    }
+
 
     // Send status heartbeat
     if (now - lastStatus >= STATUS_INTERVAL) {
@@ -262,31 +226,7 @@ void captureAndSendImage() {
     }
 }
 
-// ═══════════════════════════════════════════
-// PULSE SENSOR
-// ═══════════════════════════════════════════
 
-void sendPulseData() {
-    unsigned long currentCount = pulseCount;
-    unsigned long delta = currentCount - reportedPulseCount;
-    reportedPulseCount = currentCount;
-
-    float kwh = (float)delta / PULSE_PER_KWH;
-
-    StaticJsonDocument<128> doc;
-    doc["device_id"] = DEVICE_ID;
-    doc["count"] = delta;
-    doc["total_count"] = currentCount;
-    doc["pulse_per_kwh"] = PULSE_PER_KWH;
-    doc["kwh"] = kwh;
-
-    String payload;
-    serializeJson(doc, payload);
-
-    if (mqtt.publish(topicPulse, payload.c_str())) {
-        Serial.printf("Pulse data sent: %lu pulses (%.4f kWh)\n", delta, kwh);
-    }
-}
 
 // ═══════════════════════════════════════════
 // STATUS HEARTBEAT
@@ -299,7 +239,7 @@ void sendStatus() {
     doc["uptime_ms"] = millis();
     doc["wifi_rssi"] = WiFi.RSSI();
     doc["free_heap"] = ESP.getFreeHeap();
-    doc["total_pulses"] = pulseCount;
+
 
     String payload;
     serializeJson(doc, payload);
@@ -330,19 +270,44 @@ void connectWiFi() {
 }
 
 void connectMQTT() {
+    // Build LWT (Last Will and Testament) payload
+    // Broker sends this automatically if ESP32 disconnects unexpectedly
+    StaticJsonDocument<128> willDoc;
+    willDoc["device_id"] = DEVICE_ID;
+    willDoc["status"] = "offline";
+    String willPayload;
+    serializeJson(willDoc, willPayload);
+
     int retries = 0;
     while (!mqtt.connected() && retries < 5) {
         Serial.printf("Connecting to MQTT %s:%d...\n", MQTT_BROKER, MQTT_PORT);
 
         bool connected;
         if (strlen(MQTT_USERNAME) > 0) {
-            connected = mqtt.connect(DEVICE_ID, MQTT_USERNAME, MQTT_PASSWORD);
+            connected = mqtt.connect(
+                DEVICE_ID,
+                MQTT_USERNAME, MQTT_PASSWORD,
+                topicStatus,              // will topic
+                0,                        // will QoS
+                true,                     // will retain
+                willPayload.c_str()       // will message
+            );
         } else {
-            connected = mqtt.connect(DEVICE_ID);
+            connected = mqtt.connect(
+                DEVICE_ID,
+                NULL, NULL,               // no user/pass
+                topicStatus,              // will topic
+                0,                        // will QoS
+                true,                     // will retain
+                willPayload.c_str()       // will message
+            );
         }
 
         if (connected) {
-            Serial.println("MQTT connected!");
+            Serial.println("MQTT connected (with LWT)!");
+
+            // Immediately publish online status on connect
+            sendStatus();
             return;
         }
 

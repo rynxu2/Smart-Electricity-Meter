@@ -77,7 +77,7 @@ class TelegramNotifier:
             return False
 
         target = chat_id or self.default_chat_id
-        source_label = {"ocr": "📷 Camera OCR", "pulse": "📡 Cảm biến quang", "manual": "✏️ Nhập tay"}
+        source_label = {"ocr": "📷 Camera OCR", "manual": "✏️ Nhập tay"}
         text = (
             f"📊 *Cập nhật chỉ số điện*\n\n"
             f"Công tơ: *{device_name}*\n"

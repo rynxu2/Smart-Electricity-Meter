@@ -9,7 +9,6 @@ export default function SettingsPage() {
   const [telegramToken, setTelegramToken] = useState("");
   const [telegramChatId, setTelegramChatId] = useState("");
   const [captureInterval, setCaptureInterval] = useState("6");
-  const [pulseInterval, setPulseInterval] = useState("5");
   const [alertEnabled, setAlertEnabled] = useState(true);
   const [saved, setSaved] = useState(false);
 
@@ -77,22 +76,13 @@ export default function SettingsPage() {
         <div className="section-title" style={{ marginBottom: "1rem" }}>
           <Clock size={16} /> Chu kỳ đọc dữ liệu
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
-          <div>
+        <div>
             <label style={{ display: "block", fontSize: "0.8rem", color: "var(--text-secondary)", marginBottom: "0.375rem" }}>
               Chụp ảnh OCR (giờ)
             </label>
             <input className="input" type="number" min={1} max={24} value={captureInterval} onChange={(e) => setCaptureInterval(e.target.value)} style={{ width: "100%" }} />
             <span style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>Mặc định: 6 giờ/lần</span>
           </div>
-          <div>
-            <label style={{ display: "block", fontSize: "0.8rem", color: "var(--text-secondary)", marginBottom: "0.375rem" }}>
-              Gửi dữ liệu pulse (phút)
-            </label>
-            <input className="input" type="number" min={1} max={60} value={pulseInterval} onChange={(e) => setPulseInterval(e.target.value)} style={{ width: "100%" }} />
-            <span style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>Mặc định: 5 phút/lần</span>
-          </div>
-        </div>
       </div>
 
       {/* Alert Settings */}

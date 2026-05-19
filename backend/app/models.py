@@ -21,6 +21,9 @@ class DeviceResponse(DeviceBase):
     id: str
     status: str
     last_seen_at: Optional[datetime] = None
+    wifi_rssi: Optional[int] = None
+    uptime_ms: Optional[int] = None
+    free_heap: Optional[int] = None
     created_at: datetime
 
 
@@ -33,7 +36,7 @@ class DeviceUpdate(BaseModel):
 # ── Reading ──────────────────────────────────
 class ReadingBase(BaseModel):
     device_id: str
-    source: str = Field(..., pattern="^(ocr|pulse|manual)$")
+    source: str = Field(..., pattern="^(ocr|manual)$")
 
 
 class ReadingOCR(ReadingBase):
@@ -42,11 +45,6 @@ class ReadingOCR(ReadingBase):
     ocr_confidence: float
     image_url: Optional[str] = None
 
-
-class ReadingPulse(ReadingBase):
-    source: str = "pulse"
-    pulse_count: int
-    pulse_kwh: float
 
 
 class ReadingManual(ReadingBase):
@@ -60,8 +58,9 @@ class ReadingResponse(BaseModel):
     ocr_value: Optional[float] = None
     ocr_confidence: Optional[float] = None
     image_url: Optional[str] = None
-    pulse_count: Optional[int] = None
-    pulse_kwh: Optional[float] = None
+    annotated_url: Optional[str] = None
+    ocr_raw_text: Optional[str] = None
+    ocr_pipeline: Optional[str] = None
     source: str
     read_at: datetime
 
@@ -114,8 +113,6 @@ class AlertResponse(BaseModel):
 # ── Device Settings ──────────────────────────
 class DeviceSettingsUpdate(BaseModel):
     capture_interval_hours: Optional[int] = None
-    pulse_report_interval_minutes: Optional[int] = None
-    pulse_per_kwh: Optional[float] = None
     telegram_chat_id: Optional[str] = None
     alert_enabled: Optional[bool] = None
 
@@ -124,8 +121,6 @@ class DeviceSettingsResponse(BaseModel):
     id: str
     device_id: str
     capture_interval_hours: int
-    pulse_report_interval_minutes: int
-    pulse_per_kwh: float
     telegram_chat_id: Optional[str] = None
     alert_enabled: bool
 

@@ -10,7 +10,7 @@ import { apiFetch } from "@/lib/supabase";
 interface DashboardStats {
   total_devices: number;
   active_devices: number;
-  total_kwh_today: number;
+  readings_today: number;
   unread_alerts: number;
 }
 
@@ -22,7 +22,7 @@ export default function DashboardPage() {
   const [stats, setStats] = useState<DashboardStats>({
     total_devices: 0,
     active_devices: 0,
-    total_kwh_today: 0,
+    readings_today: 0,
     unread_alerts: 0,
   });
   const [currentTime, setCurrentTime] = useState("");
@@ -46,10 +46,15 @@ export default function DashboardPage() {
   }, []);
 
   useEffect(() => {
-    apiFetch<DashboardStats>("/dashboard/stats")
-      .then(setStats)
-      .catch(() => {})
-      .finally(() => setLoading(false));
+    const fetchStats = () => {
+      apiFetch<DashboardStats>("/dashboard/stats")
+        .then(setStats)
+        .catch(() => {})
+        .finally(() => setLoading(false));
+    };
+    fetchStats();
+    const interval = setInterval(fetchStats, 15_000);
+    return () => clearInterval(interval);
   }, []);
 
   return (
@@ -91,8 +96,8 @@ export default function DashboardPage() {
         <div className="card stat-card">
           <div className="stat-icon amber"><TrendingUp size={22} /></div>
           <div>
-            <div className="stat-value">{loading ? "—" : formatNumber(stats.total_kwh_today)}</div>
-            <div className="stat-label">kWh hôm nay</div>
+            <div className="stat-value">{loading ? "—" : stats.readings_today}</div>
+            <div className="stat-label">Chỉ số hôm nay</div>
           </div>
         </div>
 

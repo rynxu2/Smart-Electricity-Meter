@@ -13,6 +13,7 @@ from app.dependencies import get_db
 from app.mqtt_handler import MQTTHandler
 from app.anomaly_detector import AnomalyDetector
 from app.telegram_notifier import TelegramNotifier
+from app.device_monitor import DeviceMonitor
 from app.routers import meters, readings, bills, alerts, ml
 
 logging.basicConfig(
@@ -23,12 +24,13 @@ logger = logging.getLogger(__name__)
 
 # Global service instances
 mqtt_handler: MQTTHandler | None = None
+device_monitor: DeviceMonitor | None = None
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Startup/shutdown lifecycle: initialize MQTT, services."""
-    global mqtt_handler
+    """Startup/shutdown lifecycle: initialize MQTT, DeviceMonitor, services."""
+    global mqtt_handler, device_monitor
     settings = get_settings()
     db = get_db()
 
@@ -40,10 +42,20 @@ async def lifespan(app: FastAPI):
     mqtt_handler = MQTTHandler(db, anomaly, telegram)
     mqtt_handler.connect()
 
+    # Start device heartbeat monitor
+    device_monitor = DeviceMonitor(
+        db,
+        timeout_seconds=settings.DEVICE_OFFLINE_TIMEOUT_SECONDS,
+        interval_seconds=settings.DEVICE_MONITOR_INTERVAL_SECONDS,
+    )
+    device_monitor.start()
+
     logger.info(f"🚀 {settings.APP_NAME} v{settings.APP_VERSION} started")
     yield
 
     # Shutdown
+    if device_monitor:
+        await device_monitor.stop()
     if mqtt_handler:
         mqtt_handler.disconnect()
     logger.info("Server shutdown complete")
@@ -90,22 +102,20 @@ def create_app() -> FastAPI:
         db = get_db()
 
         devices = db.table("devices").select("id", count="exact").execute()
-        active = db.table("devices").select("id", count="exact").eq("status", "active").execute()
+        active = db.table("devices").select("id", count="exact").eq("status", "online").execute()
         unread = db.table("alerts").select("id", count="exact").eq("is_read", False).execute()
 
-        # Today's kWh from pulse readings
+        # Today's OCR readings count
         from datetime import datetime, timezone
         today = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0).isoformat()
-        today_readings = db.table("readings").select("pulse_kwh").eq(
-            "source", "pulse"
+        today_readings = db.table("readings").select("id", count="exact").eq(
+            "source", "ocr"
         ).gte("read_at", today).execute()
-
-        total_kwh_today = sum(r["pulse_kwh"] or 0 for r in (today_readings.data or []))
 
         return {
             "total_devices": devices.count or 0,
             "active_devices": active.count or 0,
-            "total_kwh_today": round(total_kwh_today, 2),
+            "readings_today": today_readings.count or 0,
             "unread_alerts": unread.count or 0,
         }
 

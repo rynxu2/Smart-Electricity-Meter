@@ -16,5 +16,9 @@ export async function apiFetch<T>(path: string, options?: RequestInit): Promise<
     const error = await res.json().catch(() => ({ detail: res.statusText }));
     throw new Error(error.detail || "API Error");
   }
+  // Handle 204 No Content (e.g. DELETE responses)
+  if (res.status === 204 || res.headers.get("content-length") === "0") {
+    return undefined as T;
+  }
   return res.json();
 }

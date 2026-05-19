@@ -14,6 +14,7 @@ interface Device {
   esp_mac_address: string;
   status: string;
   last_seen_at?: string;
+  wifi_rssi?: number;
   created_at: string;
 }
 
@@ -27,10 +28,22 @@ interface NewDeviceForm {
 const EMPTY_FORM: NewDeviceForm = { name: "", location: "", meter_serial: "", esp_mac_address: "" };
 
 const statusConfig: Record<string, { label: string; badge: string; icon: typeof Wifi }> = {
-  active: { label: "Hoạt động", badge: "badge-green", icon: Wifi },
-  inactive: { label: "Offline", badge: "badge-red", icon: WifiOff },
+  online: { label: "Online", badge: "badge-green", icon: Wifi },
+  offline: { label: "Offline", badge: "badge-red", icon: WifiOff },
   maintenance: { label: "Bảo trì", badge: "badge-amber", icon: Settings },
 };
+
+function relativeTime(dateStr?: string): string {
+  if (!dateStr) return "Chưa kết nối";
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const seconds = Math.floor(diff / 1000);
+  if (seconds < 60) return `${seconds}s trước`;
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes} phút trước`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours} giờ trước`;
+  return `${Math.floor(hours / 24)} ngày trước`;
+}
 
 export default function MetersPage() {
   const [devices, setDevices] = useState<Device[]>([]);
@@ -58,6 +71,8 @@ export default function MetersPage() {
 
   useEffect(() => {
     fetchDevices();
+    const interval = setInterval(fetchDevices, 15_000);
+    return () => clearInterval(interval);
   }, [fetchDevices]);
 
   const filtered = devices.filter((d) => {
@@ -68,6 +83,8 @@ export default function MetersPage() {
     const matchStatus = statusFilter === "all" || d.status === statusFilter;
     return matchSearch && matchStatus;
   });
+
+  const onlineCount = devices.filter((d) => d.status === "online").length;
 
   const openModal = () => {
     setForm(EMPTY_FORM);
@@ -128,7 +145,7 @@ export default function MetersPage() {
         <div>
           <h1 style={{ fontSize: "1.5rem", fontWeight: 700 }}>📊 Quản lý công tơ</h1>
           <p style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>
-            {devices.length} thiết bị · {activeCount} đang hoạt động
+            {devices.length} thiết bị · {onlineCount} đang online
           </p>
         </div>
         <button className="btn btn-primary" onClick={openModal}>
@@ -145,7 +162,7 @@ export default function MetersPage() {
           onChange={(e) => setSearch(e.target.value)}
           style={{ flex: 1, maxWidth: 320 }}
         />
-        {["all", "active", "inactive", "maintenance"].map((s) => (
+        {["all", "online", "offline", "maintenance"].map((s) => (
           <button
             key={s}
             className={`btn ${statusFilter === s ? "btn-primary" : "btn-ghost"}`}
@@ -172,7 +189,7 @@ export default function MetersPage() {
       ) : (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(350px, 1fr))", gap: "1rem" }}>
           {filtered.map((device) => {
-            const config = statusConfig[device.status] || statusConfig.inactive;
+            const config = statusConfig[device.status] || statusConfig.offline;
             const StatusIcon = config.icon;
             return (
               <div key={device.id} className="card" style={{ padding: "1.25rem" }}>
@@ -196,8 +213,8 @@ export default function MetersPage() {
                     <MapPin size={13} /> {device.location || "Chưa cài đặt"}
                   </div>
                   <div style={{ display: "flex", justifyContent: "space-between" }}>
-                    <span style={{ color: "var(--text-muted)" }}>MAC Address</span>
-                    <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "0.75rem" }}>{device.esp_mac_address || "—"}</span>
+                    <span style={{ color: "var(--text-muted)" }}>Lần cuối</span>
+                    <span style={{ fontSize: "0.75rem", color: device.status === "online" ? "#34d399" : "var(--text-muted)" }}>{relativeTime(device.last_seen_at)}</span>
                   </div>
                 </div>
 

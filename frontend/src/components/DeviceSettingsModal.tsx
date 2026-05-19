@@ -1,15 +1,13 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { X, Save, Loader2, Settings, Clock, Zap, Bell, MessageCircle } from "lucide-react";
+import { X, Save, Loader2, Settings, Clock, Bell, MessageCircle } from "lucide-react";
 import { apiFetch } from "@/lib/supabase";
 
 interface DeviceSettings {
   id: string;
   device_id: string;
   capture_interval_hours: number;
-  pulse_report_interval_minutes: number;
-  pulse_per_kwh: number;
   telegram_chat_id?: string;
   alert_enabled: boolean;
 }
@@ -29,8 +27,6 @@ export default function DeviceSettingsModal({ deviceId, deviceName, onClose }: P
 
   const [form, setForm] = useState({
     capture_interval_hours: 6,
-    pulse_report_interval_minutes: 5,
-    pulse_per_kwh: 1600,
     telegram_chat_id: "",
     alert_enabled: true,
   });
@@ -41,8 +37,6 @@ export default function DeviceSettingsModal({ deviceId, deviceName, onClose }: P
         setSettings(data);
         setForm({
           capture_interval_hours: data.capture_interval_hours,
-          pulse_report_interval_minutes: data.pulse_report_interval_minutes,
-          pulse_per_kwh: data.pulse_per_kwh,
           telegram_chat_id: data.telegram_chat_id || "",
           alert_enabled: data.alert_enabled,
         });
@@ -59,8 +53,6 @@ export default function DeviceSettingsModal({ deviceId, deviceName, onClose }: P
         method: "PATCH",
         body: JSON.stringify({
           capture_interval_hours: form.capture_interval_hours,
-          pulse_report_interval_minutes: form.pulse_report_interval_minutes,
-          pulse_per_kwh: form.pulse_per_kwh,
           telegram_chat_id: form.telegram_chat_id.trim() || null,
           alert_enabled: form.alert_enabled,
         }),
@@ -117,26 +109,6 @@ export default function DeviceSettingsModal({ deviceId, deviceName, onClose }: P
                 </div>
               </SettingField>
 
-              {/* Pulse Report Interval */}
-              <SettingField
-                icon={<Zap size={14} />}
-                label="Chu kỳ báo cáo xung"
-                desc="Gửi dữ liệu xung quang về server"
-              >
-                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                  <input type="number" className="input" style={{ width: 80, textAlign: "center", fontFamily: "'JetBrains Mono', monospace" }} value={form.pulse_report_interval_minutes} onChange={(e) => setForm({ ...form, pulse_report_interval_minutes: Math.max(1, Number(e.target.value)) })} min={1} max={60} />
-                  <span style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>phút</span>
-                </div>
-              </SettingField>
-
-              {/* Pulse per kWh */}
-              <SettingField
-                icon={<Zap size={14} />}
-                label="Số xung / kWh"
-                desc="Hệ số quy đổi xung quang sang kWh"
-              >
-                <input type="number" className="input" style={{ width: 100, textAlign: "center", fontFamily: "'JetBrains Mono', monospace" }} value={form.pulse_per_kwh} onChange={(e) => setForm({ ...form, pulse_per_kwh: Math.max(1, Number(e.target.value)) })} min={1} />
-              </SettingField>
 
               {/* Telegram */}
               <SettingField

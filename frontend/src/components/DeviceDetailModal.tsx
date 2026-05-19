@@ -23,8 +23,8 @@ interface Props {
 }
 
 const statusOptions = [
-  { value: "active", label: "Hoạt động", badge: "badge-green" },
-  { value: "inactive", label: "Offline", badge: "badge-red" },
+  { value: "online", label: "Online", badge: "badge-green" },
+  { value: "offline", label: "Offline", badge: "badge-red" },
   { value: "maintenance", label: "Bảo trì", badge: "badge-amber" },
 ];
 
